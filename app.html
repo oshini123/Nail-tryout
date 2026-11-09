@@ -1,0 +1,1090 @@
+<title>Lacquer Nail Try-On</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@1,6..96,500&family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: full-bleed camera stage, floating top bar, frosted bottom sheet with a shutter that overlaps its edge. */
+:root {
+  --ink: #0e0a0f;
+  --stage: #17111a;
+  --panel: rgba(22, 16, 25, 0.82);
+  --panel-solid: #1b141e;
+  --line: rgba(255, 232, 244, 0.13);
+  --text: #f7eef3;
+  --muted: #b3a1ab;
+  --pearl: #ecd6e2;
+  --shade: #5b1f3a;
+  --font-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --iris: conic-gradient(from 200deg, #f6d9e8, #d9e6f7, #f3ecd2, #e4d3f5, #f6d9e8);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--pearl); outline-offset: 2px; }
+
+.app {
+  position: relative;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--stage);
+  overflow: hidden;
+}
+@media (min-width: 520px) {
+  .app { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+}
+#stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+video#cam { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* Top bar */
+.topbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-bottom: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(to bottom, rgba(14,10,15,0.75), rgba(14,10,15,0));
+}
+.brand { font-family: var(--font-display); font-style: italic; font-size: 24px; letter-spacing: 0.01em; line-height: 1; margin-right: auto; }
+.brand small { display: block; font-family: var(--font-mono); font-style: normal; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.seg { display: flex; background: rgba(255,255,255,0.07); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button {
+  border: 0; background: transparent; padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.01em;
+}
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--ink); }
+.iconbtn {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+  background: rgba(255,255,255,0.07); display: grid; place-items: center; cursor: pointer; flex: none;
+}
+.iconbtn svg { width: 19px; height: 19px; }
+.iconbtn[disabled] { opacity: 0.35; cursor: default; }
+
+.status {
+  position: absolute; z-index: 5; left: 50%; transform: translateX(-50%);
+  top: calc(70px + env(safe-area-inset-top, 0px));
+  background: rgba(14,10,15,0.66); border: 1px solid var(--line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  padding: 7px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 500; white-space: nowrap; max-width: calc(100% - 32px);
+  overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px;
+}
+.status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+.status[data-tone="ok"] .dot { background: #7fd6a6; }
+.status[data-tone="busy"] .dot { background: #f2c66d; animation: pulse 1s ease-in-out infinite; }
+.status[data-tone="warn"] .dot { background: #f08a8a; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* Bottom sheet */
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--panel); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border-top: 1px solid var(--line); border-radius: 22px 22px 0 0;
+  padding-top: 40px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr);
+}
+.sheet .panel { min-width: 0; }
+.sheet .inner { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.shutter-row { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 28px; pointer-events: none; }
+.shutter-row > * { pointer-events: auto; }
+.shutter {
+  width: 68px; height: 68px; border-radius: 50%; cursor: pointer; padding: 5px;
+  border: 0; background: var(--iris); box-shadow: 0 8px 26px rgba(0,0,0,0.45);
+}
+.shutter span { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--shade); border: 3px solid var(--ink); transition: transform .15s; }
+.shutter:active span { transform: scale(0.9); }
+.side-btn {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--panel-solid); border: 1px solid var(--line);
+  display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.side-btn svg { width: 20px; height: 20px; }
+.side-btn[aria-pressed="true"] { background: var(--text); color: var(--ink); }
+
+.readout { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.readout .no { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+.readout .name { font-family: var(--font-display); font-style: italic; font-size: 21px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.readout .fin { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); white-space: nowrap; }
+
+.tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); }
+.tabs button {
+  border: 0; background: none; padding: 0 0 9px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tabs button[aria-selected="true"] { color: var(--text); border-color: var(--pearl); }
+
+.rail {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; padding-block: 4px 6px;
+  scrollbar-width: none; min-height: 84px; align-items: flex-start;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.rail::-webkit-scrollbar { display: none; }
+.opt {
+  flex: none; display: grid; justify-items: center; gap: 6px; border: 0; background: none; cursor: pointer; scroll-snap-align: center;
+  font-size: 10.5px; color: var(--muted); width: 58px; padding: 0;
+}
+.opt .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.opt[aria-pressed="true"] { color: var(--text); }
+.swatch {
+  width: 46px; height: 46px; border-radius: 50%; position: relative; padding: 3px; background: transparent;
+}
+.opt[aria-pressed="true"] .swatch { background: var(--iris); }
+.swatch i {
+  display: block; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--stage);
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55), rgba(255,255,255,0) 38%), var(--c);
+  box-shadow: inset 0 -6px 10px rgba(0,0,0,0.25);
+}
+.tile {
+  width: 52px; height: 64px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.04);
+  display: grid; place-items: center; overflow: hidden;
+}
+.opt[aria-pressed="true"] .tile { border-color: var(--pearl); background: rgba(255,255,255,0.1); }
+.tile canvas { width: 52px; height: 64px; display: block; }
+
+.lengthrow { display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: var(--muted); }
+.lengthrow input { flex: 1; accent-color: var(--pearl); min-width: 0; }
+.lengthrow output { font-family: var(--font-mono); width: 44px; text-align: right; color: var(--text); }
+
+.panel[hidden] { display: none !important; }
+
+/* Capture preview */
+.capture {
+  position: absolute; inset: 0; z-index: 20; background: rgba(8,6,9,0.92);
+  display: grid; grid-template-rows: 1fr auto; gap: 14px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.capture img { width: 100%; height: 100%; object-fit: contain; border-radius: 16px; min-height: 0; }
+.capture .actions { display: flex; gap: 10px; }
+.btn {
+  flex: 1; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.07);
+  font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn svg { width: 18px; height: 18px; }
+.btn.primary { background: var(--text); color: var(--ink); border-color: transparent; }
+.capture .note { font-size: 12px; color: var(--muted); text-align: center; margin: 0; min-height: 1em; }
+
+.toast {
+  position: absolute; z-index: 30; left: 50%; transform: translateX(-50%);
+  bottom: calc(250px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100% - 40px);
+  background: var(--text); color: var(--ink); padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4); text-align: center;
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="app" id="app">
+  <canvas id="stage" aria-label="Try-on preview"></canvas>
+  <video id="cam" playsinline muted></video>
+  <input type="file" id="photoInput" accept="image/*" hidden>
+
+  <header class="topbar">
+    <div class="brand">Lacquer<small>Nail try-on</small></div>
+    <div class="seg" role="group" aria-label="Source">
+      <button id="modeLive" type="button" aria-pressed="false">Camera</button>
+      <button id="modePhoto" type="button" aria-pressed="false">Photo</button>
+      <button id="modeDemo" type="button" aria-pressed="true">Demo</button>
+    </div>
+    <button class="iconbtn" id="sourceAction" type="button" aria-label="Switch camera" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><path d="M9.5 12.5a2.8 2.8 0 0 1 5-1.2"/><path d="M14.6 10v1.6H13"/><path d="M14.5 14.5a2.8 2.8 0 0 1-5 1.2"/><path d="M9.4 17v-1.6H11"/></svg>
+    </button>
+  </header>
+
+  <div class="status" id="status" data-tone="ok"><span class="dot"></span><span id="statusText">Demo hand. Pick a shade below.</span></div>
+
+  <section class="sheet" aria-label="Polish options">
+    <div class="shutter-row">
+      <button class="side-btn" id="compareBtn" type="button" aria-pressed="false" aria-label="Hold to compare with bare nails">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 4v16"/><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M12 6h5a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-5z" fill="currentColor" stroke="none" opacity=".35"/></svg>
+      </button>
+      <button class="shutter" id="shutter" type="button" aria-label="Capture look"><span></span></button>
+      <button class="side-btn" id="coverageBtn" type="button" aria-pressed="false" aria-label="Show polish on any hand pose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V12"/><path d="M14 11.5V6a1.5 1.5 0 0 1 3 0v8"/><path d="M8 12.5 6.6 11a1.6 1.6 0 0 0-2.4 2.1L8 18.5a5 5 0 0 0 4 2h1a4 4 0 0 0 4-4V14"/></svg>
+      </button>
+    </div>
+
+    <div class="inner readout">
+      <span class="no" id="rNo">No. 132</span>
+      <span class="name" id="rName">Fig Jam</span>
+      <span class="fin" id="rFin">Crème · Almond</span>
+    </div>
+
+    <div class="inner">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tabShade" aria-selected="true" aria-controls="pShade" type="button">Shade</button>
+        <button role="tab" id="tabFinish" aria-selected="false" aria-controls="pFinish" type="button">Finish</button>
+        <button role="tab" id="tabShape" aria-selected="false" aria-controls="pShape" type="button">Shape &amp; length</button>
+      </div>
+    </div>
+
+    <div class="panel" id="pShade" role="tabpanel"><div class="rail" id="shadeRail"></div></div>
+    <div class="panel" id="pFinish" role="tabpanel" hidden><div class="rail" id="finishRail"></div></div>
+    <div class="panel" id="pShape" role="tabpanel" hidden>
+      <div class="rail" id="shapeRail" style="min-height:78px"></div>
+      <div class="inner lengthrow">
+        <label for="lengthInput">Length</label>
+        <input type="range" id="lengthInput" min="0" max="100" value="25">
+        <output id="lengthOut" for="lengthInput">+25%</output>
+      </div>
+    </div>
+  </section>
+
+  <div class="capture" id="capture" hidden>
+    <img id="capImg" alt="Captured nail look">
+    <div style="display:grid;gap:10px">
+      <p class="note" id="capNote"></p>
+      <div class="actions">
+        <button class="btn" id="capClose" type="button">Retake</button>
+        <button class="btn" id="capShare" type="button" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M6 12v7h12v-7"/></svg>Share
+        </button>
+        <button class="btn primary" id="capSave" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg>Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------------- Catalog ---------------- */
+const SHADES = [
+  { no: '101', name: 'Ballet Slipper', hex: '#f1c3c8' },
+  { no: '108', name: 'Cotton Candy',  hex: '#f59fc3' },
+  { no: '114', name: 'Coral Reef',    hex: '#ff6f61' },
+  { no: '121', name: 'Lacquer Red',   hex: '#c8102e' },
+  { no: '126', name: 'Cherry Cola',   hex: '#7a0f1f' },
+  { no: '132', name: 'Fig Jam',       hex: '#5b1f3a' },
+  { no: '139', name: 'Orchid',        hex: '#b45fa8' },
+  { no: '145', name: 'Lavender Haze', hex: '#b9a6e0' },
+  { no: '152', name: 'Cobalt',        hex: '#1f4fbf' },
+  { no: '158', name: 'Midnight',      hex: '#1b2340' },
+  { no: '163', name: 'Teal Lagoon',   hex: '#0f7c7a' },
+  { no: '169', name: 'Sage',          hex: '#9cae8f' },
+  { no: '174', name: 'Olive Branch',  hex: '#5e6b2e' },
+  { no: '181', name: 'Butter',        hex: '#f3df8a' },
+  { no: '186', name: 'Marigold',      hex: '#f2a516' },
+  { no: '192', name: 'Burnt Sienna',  hex: '#b85a3c' },
+  { no: '197', name: 'Mocha',         hex: '#6b4a3a' },
+  { no: '203', name: 'Nude Latte',    hex: '#d7b49e' },
+  { no: '208', name: 'Milky White',   hex: '#f4f1ec' },
+  { no: '214', name: 'Onyx',          hex: '#141215' },
+  { no: '219', name: 'Silver Screen', hex: '#c9ccd3' },
+  { no: '225', name: 'Rose Gold',     hex: '#d8a08d' },
+];
+const FINISHES = [
+  { id: 'creme',   name: 'Crème' },
+  { id: 'matte',   name: 'Matte' },
+  { id: 'glitter', name: 'Glitter' },
+  { id: 'chrome',  name: 'Chrome' },
+  { id: 'cateye',  name: 'Cat-eye' },
+  { id: 'french',  name: 'French' },
+  { id: 'ombre',   name: 'Ombré' },
+];
+const SHAPES = [
+  { id: 'round',    name: 'Round',    base: 0.84 },
+  { id: 'square',   name: 'Square',   base: 0.86 },
+  { id: 'almond',   name: 'Almond',   base: 1.00 },
+  { id: 'coffin',   name: 'Coffin',   base: 1.08 },
+  { id: 'stiletto', name: 'Stiletto', base: 1.18 },
+];
+
+/* MediaPipe Hands landmark indices per finger: [mcp, pip, dip, tip] */
+const FINGERS = [
+  { key: 'thumb',  ids: [1, 2, 3, 4],     wf: 0.29, lf: 0.70 },
+  { key: 'index',  ids: [5, 6, 7, 8],     wf: 0.24, lf: 0.62 },
+  { key: 'middle', ids: [9, 10, 11, 12],  wf: 0.25, lf: 0.62 },
+  { key: 'ring',   ids: [13, 14, 15, 16], wf: 0.23, lf: 0.62 },
+  { key: 'pinky',  ids: [17, 18, 19, 20], wf: 0.19, lf: 0.62 },
+];
+
+const MP_BASE = (window.LACQUER_MP_BASE || 'mediapipe/');
+
+/* ---------------- State ---------------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('lacquer.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('lacquer.' + k, JSON.stringify(v)); } catch {} },
+};
+const state = {
+  shade: clampIdx(store.get('shade', 5), SHADES.length),
+  finish: store.get('finish', 'creme'),
+  shape: store.get('shape', 'almond'),
+  length: store.get('length', 25),
+  coverage: store.get('coverage', 'auto'),
+  compare: false,
+  mode: 'demo',
+  facing: 'environment',
+};
+if (!FINISHES.some(f => f.id === state.finish)) state.finish = 'creme';
+if (!SHAPES.some(s => s.id === state.shape)) state.shape = 'almond';
+function clampIdx(i, n) { i = Number(i) | 0; return i >= 0 && i < n ? i : 0; }
+function save() { ['shade', 'finish', 'shape', 'length', 'coverage'].forEach(k => store.set(k, state[k])); }
+
+/* ---------------- DOM ---------------- */
+const $ = id => document.getElementById(id);
+const stage = $('stage');
+const ctx = stage.getContext('2d');
+const video = $('cam');
+let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+function resizeStage() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const r = stage.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (stage.width !== w || stage.height !== h) { stage.width = w; stage.height = h; }
+  requestRender();
+}
+new ResizeObserver(resizeStage).observe(stage);
+
+/* ---------------- Color helpers ---------------- */
+function hexToRgb(h) { h = h.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+function mix(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+const WHITE = [255, 255, 255], BLACK = [0, 0, 0];
+function lighten(c, t) { return mix(c, WHITE, t); }
+function darken(c, t) { return mix(c, BLACK, t); }
+function rgba(c, a = 1) { return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+function luma(c) { return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255; }
+
+/* Small seeded RNG so each nail keeps its own glitter layout */
+function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+
+/* ---------------- Nail geometry ---------------- */
+/* Returns a Path2D in nail-local space: x across the nail (−w/2..w/2), y from cuticle (0) toward the free edge (len). */
+function nailPath(shape, w, len) {
+  const p = new Path2D();
+  const hw = w / 2, c = w * 0.16;
+  p.moveTo(-hw * 0.86, c * 0.75);
+  p.quadraticCurveTo(0, -c * 0.95, hw * 0.86, c * 0.75);
+  if (shape === 'square') {
+    const r = w * 0.15;
+    p.lineTo(hw, len * 0.4); p.lineTo(hw, len - r);
+    p.quadraticCurveTo(hw, len, hw - r, len); p.lineTo(-hw + r, len);
+    p.quadraticCurveTo(-hw, len, -hw, len - r); p.lineTo(-hw, len * 0.4);
+  } else if (shape === 'round') {
+    const y0 = len - hw * 0.95;
+    p.lineTo(hw, Math.min(len * 0.4, y0)); p.lineTo(hw, y0);
+    p.bezierCurveTo(hw, len + hw * 0.27, -hw, len + hw * 0.27, -hw, y0);
+    p.lineTo(-hw, Math.min(len * 0.4, y0));
+  } else if (shape === 'almond') {
+    p.lineTo(hw, len * 0.5);
+    p.bezierCurveTo(hw, len * 0.82, hw * 0.42, len, 0, len);
+    p.bezierCurveTo(-hw * 0.42, len, -hw, len * 0.82, -hw, len * 0.5);
+  } else if (shape === 'coffin') {
+    const tw = hw * 0.56, r = w * 0.07;
+    p.lineTo(hw, len * 0.52);
+    p.lineTo(tw + r * 0.4, len - r); p.quadraticCurveTo(tw, len, tw - r, len);
+    p.lineTo(-tw + r, len); p.quadraticCurveTo(-tw, len, -tw - r * 0.4, len - r);
+    p.lineTo(-hw, len * 0.52);
+  } else { // stiletto
+    p.lineTo(hw, len * 0.42);
+    p.bezierCurveTo(hw * 0.95, len * 0.72, hw * 0.3, len * 0.9, 0, len);
+    p.bezierCurveTo(-hw * 0.3, len * 0.9, -hw * 0.95, len * 0.72, -hw, len * 0.42);
+  }
+  p.closePath();
+  return p;
+}
+
+function nailLength(L, shape, lengthPct) {
+  const s = SHAPES.find(x => x.id === shape) || SHAPES[0];
+  return L * (s.base + (lengthPct / 100) * 0.75);
+}
+
+/* Build per-finger nail frames from landmarks already in stage pixels. */
+function nailFrames(pts) {
+  const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const palmW = d(pts[5], pts[17]);
+  const frames = [];
+  FINGERS.forEach((f, fi) => {
+    const P = pts[f.ids[1]], D = pts[f.ids[2]], T = pts[f.ids[3]];
+    const L = d(T, D);
+    if (L < 3) return;
+    const u = { x: (T.x - D.x) / L, y: (T.y - D.y) / L };
+    // Skip strongly curled fingers: nail is facing away or hidden.
+    const pdL = d(D, P) || 1;
+    const bend = ((D.x - P.x) * u.x + (D.y - P.y) * u.y) / pdL;
+    if (bend < 0.3) return;
+    if (fi > 0 && d(T, pts[0]) < d(P, pts[0]) * 1.02) return; // fingertip folded back toward the wrist
+    const v = { x: -u.y, y: u.x };
+    const w = 0.5 * palmW * f.wf + 0.5 * L * f.lf;
+    const startT = fi === 0 ? 0.24 : 0.3;
+    const base = { x: D.x + u.x * L * startT, y: D.y + u.y * L * startT };
+    frames.push({ base, u, v, w, L, angle: Math.atan2(u.y, u.x), seed: 1000 + fi * 97 });
+  });
+  return frames;
+}
+
+/* ---------------- Polish rendering ---------------- */
+function paintFinish(c, look, hw, len, nf, t) {
+  const col = hexToRgb(look.hex);
+  const fin = look.finish;
+  const W = hw * 2;
+  const fullRect = () => c.fillRect(-hw * 1.5, -len * 0.3, hw * 3, len * 1.6);
+
+  // Base coat by finish
+  if (fin === 'french') {
+    c.fillStyle = 'rgba(244, 208, 202, 0.86)'; fullRect();
+    const tip = new Path2D();
+    tip.moveTo(-hw * 1.2, len * 0.6);
+    tip.quadraticCurveTo(0, len * 0.94, hw * 1.2, len * 0.6);
+    tip.lineTo(hw * 1.2, len * 1.4); tip.lineTo(-hw * 1.2, len * 1.4); tip.closePath();
+    c.fillStyle = rgba(col); c.fill(tip);
+  } else if (fin === 'ombre') {
+    const g = c.createLinearGradient(0, 0, 0, len);
+    g.addColorStop(0, 'rgba(244, 210, 204, 0.9)');
+    g.addColorStop(0.28, rgba(mix([244, 210, 204], col, 0.15), 0.92));
+    g.addColorStop(0.92, rgba(col));
+    c.fillStyle = g; fullRect();
+  } else if (fin === 'chrome') {
+    const s = Math.sin(nf.angle * 3 + t * 0.7) * 0.35;
+    const g = c.createLinearGradient(-hw * 1.4 + s * W, -len * 0.1, hw * 1.4 + s * W, len * 0.4);
+    g.addColorStop(0.00, rgba(darken(col, 0.55)));
+    g.addColorStop(0.18, rgba(lighten(col, 0.72)));
+    g.addColorStop(0.32, rgba(col));
+    g.addColorStop(0.50, rgba(darken(col, 0.42)));
+    g.addColorStop(0.66, rgba(lighten(col, 0.85)));
+    g.addColorStop(0.82, rgba(lighten(col, 0.2)));
+    g.addColorStop(1.00, rgba(darken(col, 0.5)));
+    c.fillStyle = g; fullRect();
+  } else if (fin === 'cateye') {
+    c.fillStyle = rgba(darken(col, 0.62)); fullRect();
+    const by = len * (0.5 + 0.28 * Math.sin(nf.angle * 2 + t * 0.9));
+    const g = c.createLinearGradient(0, by - len * 0.3, 0, by + len * 0.3);
+    g.addColorStop(0, rgba(col, 0));
+    g.addColorStop(0.5, rgba(lighten(col, 0.55), 0.95));
+    g.addColorStop(1, rgba(col, 0));
+    c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = g; fullRect(); c.restore();
+  } else if (fin === 'glitter') {
+    c.fillStyle = rgba(darken(col, 0.18)); fullRect();
+  } else if (fin === 'matte') {
+    c.fillStyle = rgba(mix(col, [128, 128, 128], 0.06)); fullRect();
+  } else {
+    c.fillStyle = rgba(col); fullRect();
+  }
+
+  // Glitter flakes (also a light dusting for cat-eye)
+  if (fin === 'glitter' || fin === 'cateye') {
+    const r = rng(nf.seed);
+    const n = fin === 'glitter' ? Math.min(160, Math.max(30, (W * len) / 22)) : Math.min(40, (W * len) / 70);
+    const palette = [lighten(col, 0.65), WHITE, lighten(col, 0.35), [236, 210, 150]];
+    const fs = Math.max(1, W / 26);
+    for (let i = 0; i < n; i++) {
+      const x = (r() * 2 - 1) * hw, y = r() * len * 1.05, ph = r() * 6.28, sz = fs * (0.5 + r() * 1.1);
+      const shine = 0.25 + 0.75 * Math.max(0, Math.sin(t * 2.6 + ph + nf.angle * 5));
+      c.globalAlpha = (fin === 'glitter' ? 1 : 0.6) * shine;
+      c.fillStyle = rgba(palette[(r() * palette.length) | 0]);
+      c.save(); c.translate(x, y); c.rotate(ph); c.fillRect(-sz / 2, -sz / 2, sz, sz); c.restore();
+    }
+    c.globalAlpha = 1;
+  }
+
+  // Curvature: darker toward the side walls
+  const side = c.createLinearGradient(-hw, 0, hw, 0);
+  const edgeA = fin === 'matte' ? 0.22 : 0.3;
+  side.addColorStop(0, `rgba(0,0,0,${edgeA})`);
+  side.addColorStop(0.24, 'rgba(0,0,0,0)');
+  side.addColorStop(0.76, 'rgba(0,0,0,0)');
+  side.addColorStop(1, `rgba(0,0,0,${edgeA + 0.04})`);
+  c.fillStyle = side; fullRect();
+
+  // Cuticle shadow
+  const cut = c.createLinearGradient(0, -W * 0.16, 0, len * 0.2);
+  cut.addColorStop(0, 'rgba(40,10,20,0.32)');
+  cut.addColorStop(1, 'rgba(40,10,20,0)');
+  c.fillStyle = cut; fullRect();
+
+  // Gloss
+  if (fin !== 'matte') {
+    const strength = fin === 'chrome' ? 0.75 : luma(col) > 0.8 ? 0.45 : 0.6;
+    c.save();
+    c.translate(-hw * 0.38, len * 0.44);
+    c.scale(hw * 0.2, len * 0.34);
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, `rgba(255,255,255,${strength})`);
+    g.addColorStop(0.55, `rgba(255,255,255,${strength * 0.35})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
+    c.restore();
+    c.save();
+    c.translate(hw * 0.34, len * 0.2);
+    c.scale(hw * 0.13, len * 0.08);
+    const g2 = c.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g2.addColorStop(0, `rgba(255,255,255,${strength * 0.7})`);
+    g2.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = g2; c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+}
+
+function drawNail(c, nf, look, t) {
+  const len = nailLength(nf.L, look.shape, look.length);
+  const path = nailPath(look.shape, nf.w, len);
+  const col = hexToRgb(look.hex);
+  c.save();
+  c.setTransform(nf.v.x, nf.v.y, nf.u.x, nf.u.y, nf.base.x, nf.base.y);
+  // Soft contact shadow so the polish sits on the finger
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.35)';
+  c.shadowBlur = Math.max(2, nf.w * 0.14);
+  c.fillStyle = look.finish === 'french' ? 'rgba(244,208,202,0.9)' : rgba(col);
+  c.fill(path);
+  c.restore();
+  c.save();
+  c.clip(path);
+  paintFinish(c, look, nf.w / 2, len, nf, t);
+  c.restore();
+  c.lineWidth = Math.max(0.75, nf.w * 0.035);
+  c.strokeStyle = 'rgba(30,10,20,0.28)';
+  c.stroke(path);
+  c.restore();
+}
+
+function currentLook() {
+  const s = SHADES[state.shade];
+  return { hex: s.hex, finish: state.finish, shape: state.shape, length: state.length };
+}
+
+/* ---------------- Hand orientation ---------------- */
+/* Landmarks arrive in un-mirrored source pixels. MediaPipe labels handedness as if the frame were mirrored,
+   so a person's right hand reads "Left". Back of a right hand: index knuckle left of pinky knuckle. */
+function isBackOfHand(src, label, score = 1) {
+  // A low-confidence handedness guess can't tell back from palm, so show the polish rather than hide it.
+  if (score < 0.8) return true;
+  const ax = src[5].x - src[0].x, ay = src[5].y - src[0].y;
+  const bx = src[17].x - src[0].x, by = src[17].y - src[0].y;
+  const cross = ax * by - ay * bx;
+  return (label === 'Left') === (cross > 0);
+}
+
+/* ---------------- One Euro filter for steadier live tracking ---------------- */
+class LowPass { constructor() { this.y = null; } f(x, a) { this.y = this.y == null ? x : a * x + (1 - a) * this.y; return this.y; } }
+class OneEuro {
+  constructor(minCut = 1.6, beta = 0.012, dCut = 1.0) { this.minCut = minCut; this.beta = beta; this.dCut = dCut; this.x = new LowPass(); this.dx = new LowPass(); this.t = null; }
+  alpha(cut, dt) { const tau = 1 / (2 * Math.PI * cut); return 1 / (1 + tau / dt); }
+  f(x, t) {
+    if (this.t == null) { this.t = t; this.dx.f(0, 1); return this.x.f(x, 1); }
+    const dt = Math.max(1e-3, t - this.t); this.t = t;
+    const prev = this.x.y;
+    const edx = this.dx.f((x - prev) / dt, this.alpha(this.dCut, dt));
+    return this.x.f(x, this.alpha(this.minCut + this.beta * Math.abs(edx), dt));
+  }
+}
+const filters = new Map();
+/* Hysteresis so the polish doesn't flicker when the hand is edge-on */
+const backVotes = new Map();
+function steadyBack(key, isBack) {
+  let v = backVotes.has(key) ? backVotes.get(key) : (isBack ? 4 : -4);
+  v = Math.max(-6, Math.min(6, v + (isBack ? 1 : -1)));
+  backVotes.set(key, v);
+  return v >= 0;
+}
+function smoothHand(key, pts, t) {
+  let fs = filters.get(key);
+  if (!fs) { fs = pts.map(() => [new OneEuro(), new OneEuro()]); filters.set(key, fs); }
+  return pts.map((p, i) => ({ x: fs[i][0].f(p.x, t), y: fs[i][1].f(p.y, t) }));
+}
+
+/* ---------------- Frame composition ---------------- */
+let frame = null;        // { img, w, h, mirror, fit, hands: [{ pts, label }] }
+let lastNailCount = 0;
+
+function render(t = performance.now() / 1000) {
+  const cw = stage.width, ch = stage.height;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#17111a';
+  ctx.fillRect(0, 0, cw, ch);
+  if (!frame || !frame.img) return;
+  const { img, w, h, mirror, fit } = frame;
+  // Keep the subject clear of the bottom sheet in contain mode
+  const sheetPx = fit === 'contain' ? sheetHeight() * dpr : 0;
+  const topPx = fit === 'contain' ? 60 * dpr : 0;
+  const availH = ch - sheetPx - topPx;
+  const s = fit === 'cover' ? Math.max(cw / w, ch / h) : Math.min(cw / w, availH / h);
+  const dx = (cw - w * s) / 2, dy = fit === 'cover' ? (ch - h * s) / 2 : topPx + (availH - h * s) / 2;
+
+  ctx.save();
+  if (mirror) { ctx.translate(cw, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(img, dx, dy, w * s, h * s);
+  ctx.restore();
+
+  let count = 0, anyHand = false, anyBack = false;
+  const look = currentLook();
+  for (const hand of frame.hands || []) {
+    anyHand = true;
+    const back = hand.back != null ? hand.back : isBackOfHand(hand.pts, hand.label, hand.score);
+    if (back) anyBack = true;
+    if (state.compare || (!back && state.coverage === 'auto')) continue;
+    const pts = hand.pts.map(p => {
+      let x = dx + p.x * s; const y = dy + p.y * s;
+      if (mirror) x = cw - x;
+      return { x, y };
+    });
+    for (const nf of nailFrames(pts)) { drawNail(ctx, nf, look, t); count++; }
+  }
+  lastNailCount = count;
+  frame.anyHand = anyHand; frame.anyBack = anyBack;
+}
+
+let renderQueued = false;
+function requestRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; if (state.mode !== 'live') render(); });
+}
+
+/* Animate shimmer finishes on still images */
+function stillLoop() {
+  if (state.mode !== 'live' && ['glitter', 'cateye', 'chrome'].includes(state.finish) && document.visibilityState === 'visible') render();
+  requestAnimationFrame(stillLoop);
+}
+requestAnimationFrame(stillLoop);
+
+function sheetHeight() { const el = document.querySelector('.sheet'); return el ? el.getBoundingClientRect().height + 34 : 260; }
+
+/* ---------------- Demo hand (drawn, with known landmarks) ---------------- */
+const DEMO_W = 720, DEMO_H = 960;
+const DEMO_LM = [
+  [0.52, 0.93], [0.40, 0.86], [0.30, 0.77], [0.235, 0.675], [0.185, 0.6],
+  [0.40, 0.62], [0.37, 0.48], [0.356, 0.39], [0.346, 0.315],
+  [0.51, 0.60], [0.512, 0.44], [0.514, 0.34], [0.516, 0.26],
+  [0.61, 0.62], [0.633, 0.475], [0.648, 0.39], [0.66, 0.318],
+  [0.70, 0.67], [0.738, 0.565], [0.757, 0.497], [0.773, 0.44],
+].map(([x, y]) => ({ x: x * DEMO_W, y: y * DEMO_H }));
+
+function buildDemoImage() {
+  const cv = document.createElement('canvas');
+  cv.width = DEMO_W; cv.height = DEMO_H;
+  const c = cv.getContext('2d');
+  const bg = c.createRadialGradient(DEMO_W * 0.5, DEMO_H * 0.45, 40, DEMO_W * 0.5, DEMO_H * 0.5, DEMO_H * 0.75);
+  bg.addColorStop(0, '#3a2a35'); bg.addColorStop(1, '#17111a');
+  c.fillStyle = bg; c.fillRect(0, 0, DEMO_W, DEMO_H);
+  // fabric texture
+  const r = rng(7);
+  for (let i = 0; i < 2200; i++) { c.fillStyle = `rgba(255,255,255,${r() * 0.025})`; c.fillRect(r() * DEMO_W, r() * DEMO_H, 2, 2); }
+
+  const L = DEMO_LM, skin = '#c98e6e', skinLo = '#a8704f', skinHi = '#dfac8c';
+  const palmW = Math.hypot(L[5].x - L[17].x, L[5].y - L[17].y);
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  // forearm
+  c.fillStyle = skin;
+  c.beginPath(); c.moveTo(L[0].x - palmW * 0.5, L[0].y - palmW * 0.45); c.lineTo(L[0].x - palmW * 0.52, DEMO_H + 20);
+  c.lineTo(L[0].x + palmW * 0.5, DEMO_H + 20); c.lineTo(L[0].x + palmW * 0.62, L[0].y - palmW * 0.5); c.fill();
+  // palm/back of hand
+  const palm = [L[0], L[1], L[2], L[5], L[9], L[13], L[17]];
+  c.fillStyle = skin; c.strokeStyle = skin; c.lineWidth = palmW * 0.28;
+  c.beginPath(); palm.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.closePath(); c.fill(); c.stroke();
+  // fingers
+  FINGERS.forEach((f, fi) => {
+    const ids = fi === 0 ? [1, 2, 3, 4] : [f.ids[0], f.ids[1], f.ids[2], f.ids[3]];
+    const width = palmW * (fi === 0 ? 0.3 : fi === 4 ? 0.22 : 0.27);
+    // pull the last point back so the rounded cap ends at the fingertip landmark
+    const pts = ids.map(id => L[id]);
+    const a = pts[2], b = pts[3], ln = Math.hypot(b.x - a.x, b.y - a.y);
+    const tipIn = { x: b.x - (b.x - a.x) / ln * width * 0.45, y: b.y - (b.y - a.y) / ln * width * 0.45 };
+    const P = [pts[0], pts[1], pts[2], tipIn];
+    c.strokeStyle = skinLo; c.lineWidth = width + 4;
+    c.beginPath(); P.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.stroke();
+    c.strokeStyle = skin; c.lineWidth = width;
+    c.beginPath(); P.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.stroke();
+    // highlight along the finger
+    c.strokeStyle = skinHi; c.globalAlpha = 0.35; c.lineWidth = width * 0.28;
+    c.beginPath(); P.forEach((p, i) => { const q = { x: p.x - width * 0.12, y: p.y }; i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y); }); c.stroke();
+    c.globalAlpha = 1;
+    // knuckle creases
+    [ids[1], ids[2]].forEach(id => {
+      c.strokeStyle = 'rgba(110,60,40,0.35)'; c.lineWidth = 1.6;
+      c.beginPath(); c.moveTo(L[id].x - width * 0.22, L[id].y); c.quadraticCurveTo(L[id].x, L[id].y + 4, L[id].x + width * 0.22, L[id].y); c.stroke();
+    });
+  });
+  // bare nails, so "compare" has something to show
+  const bare = nailFrames(L);
+  bare.forEach(nf => {
+    const len = nf.L * 0.82;
+    c.save(); c.setTransform(nf.v.x, nf.v.y, nf.u.x, nf.u.y, nf.base.x, nf.base.y);
+    const p = nailPath('round', nf.w * 0.96, len);
+    c.fillStyle = '#e7b7a2'; c.fill(p);
+    c.strokeStyle = 'rgba(120,60,45,0.4)'; c.lineWidth = 1.2; c.stroke(p);
+    c.fillStyle = 'rgba(255,240,232,0.7)'; c.beginPath(); c.ellipse(0, len * 0.88, nf.w * 0.36, len * 0.1, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
+  });
+  return cv;
+}
+const demoImg = buildDemoImage();
+function showDemo() {
+  frame = { img: demoImg, w: DEMO_W, h: DEMO_H, mirror: false, fit: 'contain', hands: [{ pts: DEMO_LM, label: 'Left' }] };
+  setStatus('Demo hand. Pick a shade, finish and shape below.', 'ok');
+  requestRender();
+}
+
+/* ---------------- Hand tracking (MediaPipe Hands) ---------------- */
+let hands = null, handsReady = null, pending = null;
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(s); });
+}
+function ensureHands() {
+  if (handsReady) return handsReady;
+  handsReady = (async () => {
+    setStatus('Loading hand tracking…', 'busy');
+    if (!window.Hands) await loadScript(MP_BASE + 'hands.js');
+    hands = new window.Hands({ locateFile: f => MP_BASE + f });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5, selfieMode: false });
+    hands.onResults(onResults);
+    await hands.initialize();
+    return hands;
+  })();
+  handsReady.catch(() => { handsReady = null; });
+  return handsReady;
+}
+
+function onResults(res) {
+  const kind = pending; pending = null;
+  const img = res.image;
+  const w = img.width || img.videoWidth, h = img.height || img.videoHeight;
+  const now = performance.now() / 1000;
+  const list = (res.multiHandLandmarks || []).map((lm, i) => {
+    const hd = (res.multiHandedness && res.multiHandedness[i]) || {};
+    const label = hd.label || hd.categoryName || 'Left';
+    const score = hd.score == null ? 1 : hd.score;
+    let pts = lm.map(p => ({ x: p.x * w, y: p.y * h }));
+    const key = label + (i > 0 && list0Label(res, i) ? i : '');
+    let back = null;
+    if (kind === 'live') { pts = smoothHand(key, pts, now); back = steadyBack(key, isBackOfHand(pts, label, score)); }
+    return { pts, label, score, back };
+  });
+  if (kind === 'live') {
+    if (!list.length) { filters.clear(); backVotes.clear(); }
+    frame = { img, w, h, mirror: state.facing === 'user', fit: 'cover', hands: list };
+    render(now);
+    liveStatus();
+  } else if (kind === 'photo' && photo) {
+    frame = { img: photo.canvas, w: photo.w, h: photo.h, mirror: false, fit: 'contain', hands: list };
+    photo.hands = list;
+    render(now);
+    if (!list.length) setStatus('No hand found. Try a bright photo of the back of your hand.', 'warn');
+    else if (!frame.anyBack && state.coverage === 'auto') setStatus('That looks like a palm. Show the back of your hand.', 'warn');
+    else setStatus(`${lastNailCount} nails painted.`, 'ok');
+  }
+}
+function list0Label(res, i) { const a = res.multiHandedness || []; return a[0] && a[i] && a[0].label === a[i].label; }
+
+/* ---------------- Live camera ---------------- */
+let streamOn = false, busy = false, liveMsgAt = 0;
+async function startCamera() {
+  stopCamera();
+  const constraints = { audio: false, video: { facingMode: state.facing, width: { ideal: 1280 }, height: { ideal: 720 } } };
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = stream;
+  await video.play();
+  streamOn = true;
+  filters.clear();
+  liveLoop();
+}
+function stopCamera() {
+  streamOn = false;
+  const s = video.srcObject;
+  if (s) { s.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+}
+async function liveLoop() {
+  if (!streamOn || state.mode !== 'live') return;
+  if (video.readyState >= 2 && !busy) {
+    if (hands) {
+      busy = true; pending = 'live';
+      try { await hands.send({ image: video }); } catch (e) { console.warn(e); }
+      busy = false;
+    } else {
+      frame = { img: video, w: video.videoWidth, h: video.videoHeight, mirror: state.facing === 'user', fit: 'cover', hands: [] };
+      render();
+    }
+  }
+  requestAnimationFrame(liveLoop);
+}
+function liveStatus() {
+  const now = performance.now();
+  if (now - liveMsgAt < 400) return;
+  liveMsgAt = now;
+  if (!frame.anyHand) setStatus('Point the camera at the back of your hand.', 'busy');
+  else if (!frame.anyBack && state.coverage === 'auto') setStatus('Turn your hand so the nails face the camera.', 'warn');
+  else setStatus(lastNailCount ? `Tracking ${lastNailCount} nails` : 'Spread your fingers a little.', lastNailCount ? 'ok' : 'busy');
+}
+
+/* ---------------- Photo ---------------- */
+let photo = null;
+async function loadPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const max = 1280, sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.naturalWidth * sc); cv.height = Math.round(img.naturalHeight * sc);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    photo = { canvas: cv, w: cv.width, h: cv.height, hands: [] };
+    frame = { img: cv, w: cv.width, h: cv.height, mirror: false, fit: 'contain', hands: [] };
+    render();
+    setStatus('Finding your nails…', 'busy');
+    await ensureHands();
+    if (hands.reset) hands.reset();
+    pending = 'photo';
+    await hands.send({ image: cv });
+  } catch (e) {
+    console.warn(e);
+    setStatus('Hand tracking could not load here. The demo hand still works.', 'warn');
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/* ---------------- Modes ---------------- */
+async function setMode(mode) {
+  if (window.LACQUER_PREVIEW && mode !== 'demo') {
+    toast('Hand tracking runs in the hosted app on your phone. This preview shows the demo hand.');
+    return;
+  }
+  if (mode === 'live') {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('no camera api');
+      state.mode = 'live'; syncModeButtons();
+      setStatus('Starting camera…', 'busy');
+      await startCamera();
+      ensureHands().then(() => liveStatus()).catch(() => setStatus('Hand tracking could not load. Check your connection.', 'warn'));
+    } catch (e) {
+      console.warn(e);
+      stopCamera();
+      state.mode = photo ? 'photo' : 'demo'; syncModeButtons();
+      if (state.mode === 'photo') { frame = { img: photo.canvas, w: photo.w, h: photo.h, mirror: false, fit: 'contain', hands: photo.hands }; requestRender(); }
+      else showDemo();
+      toast(e && e.name === 'NotAllowedError'
+        ? 'Camera access was blocked. Allow it in your browser settings, or try a photo.'
+        : 'Camera isn’t available in this view. Open the hosted app on your phone, or try a photo.');
+    }
+    return;
+  }
+  stopCamera();
+  state.mode = mode; syncModeButtons();
+  if (mode === 'photo') {
+    if (photo) { frame = { img: photo.canvas, w: photo.w, h: photo.h, mirror: false, fit: 'contain', hands: photo.hands }; setStatus('Photo loaded. Tap the image icon to choose another.', 'ok'); requestRender(); }
+    else { $('photoInput').click(); setStatus('Choose a photo of the back of your hand.', 'busy'); }
+  } else showDemo();
+}
+function syncModeButtons() {
+  $('modeLive').setAttribute('aria-pressed', state.mode === 'live');
+  $('modePhoto').setAttribute('aria-pressed', state.mode === 'photo');
+  $('modeDemo').setAttribute('aria-pressed', state.mode === 'demo');
+  const a = $('sourceAction');
+  a.disabled = state.mode === 'demo';
+  a.setAttribute('aria-label', state.mode === 'photo' ? 'Choose another photo' : 'Switch camera');
+  a.innerHTML = state.mode === 'photo'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m20 16-4.5-4.5L7 19"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><path d="M9.5 12.5a2.8 2.8 0 0 1 5-1.2"/><path d="M14.6 10v1.6H13"/><path d="M14.5 14.5a2.8 2.8 0 0 1-5 1.2"/><path d="M9.4 17v-1.6H11"/></svg>';
+}
+
+$('modeLive').onclick = () => setMode('live');
+$('modePhoto').onclick = () => setMode('photo');
+$('modeDemo').onclick = () => setMode('demo');
+$('sourceAction').onclick = async () => {
+  if (state.mode === 'photo') $('photoInput').click();
+  else if (state.mode === 'live') {
+    state.facing = state.facing === 'environment' ? 'user' : 'environment';
+    try { await startCamera(); } catch { toast('Couldn’t switch cameras on this device.'); }
+  }
+};
+$('photoInput').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (f) { state.mode = 'photo'; syncModeButtons(); loadPhoto(f); }
+  else if (!photo) { state.mode = 'demo'; syncModeButtons(); showDemo(); }
+};
+
+/* ---------------- Options UI ---------------- */
+function miniNail(canvas, shape, finish, hex, lengthPct) {
+  const r = 2, W = 52, H = 64;
+  canvas.width = W * r; canvas.height = H * r;
+  const c = canvas.getContext('2d');
+  c.setTransform(r, 0, 0, r, 0, 0);
+  c.clearRect(0, 0, W, H);
+  // Draw a nail pointing up: u = (0,-1), v = (1,0)... flip so free edge is at the top
+  const nf = { base: { x: W / 2 * r, y: (H - 8) * r }, u: { x: 0, y: -1 }, v: { x: -1, y: 0 }, w: 24 * r, L: 40 * r, angle: -Math.PI / 2, seed: 77 };
+  const look = { hex, finish, shape, length: lengthPct };
+  // Scale L so all shapes fit the tile
+  const len = nailLength(nf.L, shape, lengthPct);
+  const fitL = Math.min(1, (H - 12) * r / len);
+  nf.L *= fitL; nf.w *= Math.max(0.8, fitL);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  drawNail(c, nf, look, 1.2);
+}
+
+function buildRails() {
+  const sr = $('shadeRail');
+  sr.innerHTML = '';
+  SHADES.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.type = 'button';
+    b.setAttribute('aria-pressed', i === state.shade);
+    b.setAttribute('aria-label', `No. ${s.no} ${s.name}`);
+    b.innerHTML = `<span class="swatch" style="--c:${s.hex}"><i></i></span><span class="label">${s.no}</span>`;
+    b.onclick = () => { state.shade = i; onChange(); };
+    sr.appendChild(b);
+  });
+  const fr = $('finishRail');
+  fr.innerHTML = '';
+  FINISHES.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.type = 'button'; b.dataset.id = f.id;
+    b.setAttribute('aria-pressed', f.id === state.finish);
+    b.innerHTML = `<span class="tile"><canvas></canvas></span><span class="label">${f.name}</span>`;
+    b.onclick = () => { state.finish = f.id; onChange(); };
+    fr.appendChild(b);
+  });
+  const shr = $('shapeRail');
+  shr.innerHTML = '';
+  SHAPES.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.type = 'button'; b.dataset.id = s.id;
+    b.setAttribute('aria-pressed', s.id === state.shape);
+    b.innerHTML = `<span class="tile"><canvas></canvas></span><span class="label">${s.name}</span>`;
+    b.onclick = () => { state.shape = s.id; onChange(); };
+    shr.appendChild(b);
+  });
+}
+
+function refreshUI() {
+  const s = SHADES[state.shade];
+  const fin = FINISHES.find(f => f.id === state.finish), shp = SHAPES.find(x => x.id === state.shape);
+  document.documentElement.style.setProperty('--shade', s.hex);
+  $('rNo').textContent = 'No. ' + s.no;
+  $('rName').textContent = s.name;
+  $('rFin').textContent = `${fin.name} · ${shp.name}`;
+  [...$('shadeRail').children].forEach((b, i) => b.setAttribute('aria-pressed', i === state.shade));
+  [...$('finishRail').children].forEach(b => {
+    b.setAttribute('aria-pressed', b.dataset.id === state.finish);
+    miniNail(b.querySelector('canvas'), 'round', b.dataset.id, s.hex, 10);
+  });
+  [...$('shapeRail').children].forEach(b => {
+    b.setAttribute('aria-pressed', b.dataset.id === state.shape);
+    miniNail(b.querySelector('canvas'), b.dataset.id, state.finish, s.hex, state.length);
+  });
+  $('lengthInput').value = state.length;
+  $('lengthOut').textContent = '+' + state.length + '%';
+  $('coverageBtn').setAttribute('aria-pressed', state.coverage === 'always');
+}
+function onChange() { save(); refreshUI(); requestRender(); }
+
+$('lengthInput').oninput = e => { state.length = +e.target.value; onChange(); };
+
+['Shade', 'Finish', 'Shape'].forEach(name => {
+  $('tab' + name).onclick = () => {
+    ['Shade', 'Finish', 'Shape'].forEach(n => {
+      $('tab' + n).setAttribute('aria-selected', n === name);
+      $('p' + n).hidden = n !== name;
+    });
+  };
+});
+
+// Hold to compare
+const cmp = $('compareBtn');
+const setCompare = on => { state.compare = on; cmp.setAttribute('aria-pressed', on); requestRender(); if (state.mode === 'live') render(); };
+cmp.addEventListener('pointerdown', e => { e.preventDefault(); setCompare(true); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => cmp.addEventListener(ev, () => state.compare && setCompare(false)));
+cmp.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setCompare(true); } });
+cmp.addEventListener('keyup', () => setCompare(false));
+
+$('coverageBtn').onclick = () => {
+  state.coverage = state.coverage === 'auto' ? 'always' : 'auto';
+  onChange();
+  toast(state.coverage === 'always' ? 'Polish shows on any hand pose.' : 'Polish shows only when nails face the camera.');
+};
+
+/* ---------------- Status & toast ---------------- */
+function setStatus(text, tone = 'ok') { $('statusText').textContent = text; $('status').dataset.tone = tone; }
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+/* ---------------- Capture ---------------- */
+let capBlob = null;
+$('shutter').onclick = async () => {
+  if (!frame) return;
+  render();
+  const out = document.createElement('canvas');
+  out.width = stage.width; out.height = stage.height;
+  const c = out.getContext('2d');
+  c.drawImage(stage, 0, 0);
+  // caption band
+  const s = SHADES[state.shade], fin = FINISHES.find(f => f.id === state.finish), shp = SHAPES.find(x => x.id === state.shape);
+  const k = out.width / 400;
+  const bandTop = frame.fit === 'contain' ? out.height - sheetHeight() * dpr : out.height - 110 * k;
+  const g = c.createLinearGradient(0, bandTop - 40 * k, 0, out.height);
+  g.addColorStop(0, 'rgba(14,10,15,0)'); g.addColorStop(0.35, 'rgba(14,10,15,0.85)'); g.addColorStop(1, 'rgba(14,10,15,0.95)');
+  c.fillStyle = g; c.fillRect(0, bandTop - 40 * k, out.width, out.height - bandTop + 40 * k);
+  const y0 = bandTop + 22 * k;
+  c.fillStyle = s.hex; c.beginPath(); c.arc(28 * k, y0 + 4 * k, 12 * k, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1.5 * k; c.stroke();
+  c.fillStyle = '#f7eef3';
+  c.font = `italic 500 ${22 * k}px "Bodoni Moda", Georgia, serif`;
+  c.fillText(s.name, 50 * k, y0 + 10 * k);
+  c.fillStyle = '#b3a1ab';
+  c.font = `500 ${10.5 * k}px "DM Mono", monospace`;
+  c.fillText(`NO. ${s.no} · ${fin.name.toUpperCase()} · ${shp.name.toUpperCase()}`, 50 * k, y0 + 28 * k);
+  c.textAlign = 'right';
+  c.font = `italic 500 ${15 * k}px "Bodoni Moda", Georgia, serif`;
+  c.fillText('Lacquer', out.width - 18 * k, y0 + 10 * k);
+  capBlob = await new Promise(r => out.toBlob(r, 'image/png'));
+  $('capImg').src = URL.createObjectURL(capBlob);
+  $('capNote').textContent = '';
+  const file = new File([capBlob], fileName(), { type: 'image/png' });
+  $('capShare').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
+  $('capture').hidden = false;
+};
+function fileName() { const s = SHADES[state.shade]; return `lacquer-${s.no}-${s.name.toLowerCase().replace(/\s+/g, '-')}-${state.finish}.png`; }
+$('capClose').onclick = () => { $('capture').hidden = true; };
+$('capShare').onclick = async () => {
+  try { await navigator.share({ files: [new File([capBlob], fileName(), { type: 'image/png' })], title: 'My Lacquer look' }); }
+  catch (e) { if (e && e.name !== 'AbortError') $('capNote').textContent = 'Sharing isn’t available here. Use Save instead.'; }
+};
+$('capSave').onclick = async () => {
+  if (!capBlob) return;
+  // Inside a Claude artifact, saves go through the downloads capability.
+  if (window.claude && window.claude.use) {
+    try {
+      const dl = await window.claude.use('downloads');
+      if (dl) { await dl.save({ filename: fileName(), data: capBlob }); $('capNote').textContent = 'Saved.'; return; }
+    } catch (e) {
+      if (e && e.code === 'declined') { $('capNote').textContent = 'Save cancelled.'; return; }
+      $('capNote').textContent = 'Saving isn’t available in this view.'; return;
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(capBlob); a.download = fileName();
+  document.body.appendChild(a); a.click(); a.remove();
+  $('capNote').textContent = 'Saved to your downloads.';
+};
+
+/* ---------------- Boot ---------------- */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && state.mode === 'live') stopCamera();
+  else if (document.visibilityState === 'visible' && state.mode === 'live' && !streamOn) startCamera().catch(() => setMode('demo'));
+});
+buildRails();
+refreshUI();
+syncModeButtons();
+resizeStage();
+showDemo();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(requestRender);
+
+window.__lacquer = { state, render, nailFrames, isBackOfHand, DEMO_LM, setMode, demoImg, loadPhoto, get frame() { return frame; } };
+})();
+</script>
