@@ -87,8 +87,8 @@ video#cam { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-eve
   position: absolute; z-index: 5; left: 50%; transform: translateX(-50%);
   top: calc(70px + env(safe-area-inset-top, 0px));
   background: rgba(14,10,15,0.66); border: 1px solid var(--line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  padding: 7px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 500; white-space: nowrap; max-width: calc(100% - 32px);
-  overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px;
+  padding: 7px 13px; border-radius: 16px; font-size: 12.5px; font-weight: 500; max-width: calc(100% - 32px); width: max-content;
+  display: flex; align-items: center; gap: 8px; line-height: 1.35;
 }
 .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
 .status[data-tone="ok"] .dot { background: #7fd6a6; }
@@ -325,7 +325,9 @@ const FINGERS = [
   { key: 'pinky',  ids: [17, 18, 19, 20], wf: 0.19, lf: 0.62 },
 ];
 
-const MP_BASE = (window.LACQUER_MP_BASE || 'mediapipe/');
+const MP_VERSION = '0.4.1675469240';
+// Try the copy bundled with the app first, then the public CDN copy of the same version.
+const MP_BASES = [window.LACQUER_MP_BASE || 'mediapipe/', `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${MP_VERSION}/`];
 
 /* ---------------- State ---------------- */
 const store = {
@@ -747,20 +749,42 @@ let hands = null, handsReady = null, pending = null;
 function loadScript(src) {
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(s); });
 }
+let trackingError = '';
+function withTimeout(p, ms, what) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(what + ' timed out')), ms))]);
+}
+async function probe(url) {
+  try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok ? '' : `HTTP ${r.status}`; }
+  catch { return 'unreachable'; }
+}
+async function tryBase(base) {
+  if (!window.Hands) await withTimeout(loadScript(base + 'hands.js'), 20000, 'hands.js');
+  const missing = await probe(base + 'hand_landmark_full.tflite');
+  if (missing) throw new Error(`model file ${missing} at ${base}`);
+  const h = new window.Hands({ locateFile: f => base + f });
+  h.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5, selfieMode: false });
+  h.onResults(onResults);
+  await withTimeout(h.initialize(), 45000, 'model start-up');
+  return h;
+}
 function ensureHands() {
   if (handsReady) return handsReady;
   handsReady = (async () => {
     setStatus('Loading hand tracking…', 'busy');
-    if (!window.Hands) await loadScript(MP_BASE + 'hands.js');
-    hands = new window.Hands({ locateFile: f => MP_BASE + f });
-    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5, selfieMode: false });
-    hands.onResults(onResults);
-    await hands.initialize();
-    return hands;
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) throw new Error('this browser has no WebGL 2 (update the OS/browser, or use Chrome)');
+    if (typeof WebAssembly !== 'object') throw new Error('this browser has no WebAssembly');
+    const errors = [];
+    for (const base of MP_BASES) {
+      try { hands = await tryBase(base); console.info('[lacquer] hand tracking from', base); return hands; }
+      catch (e) { console.warn('[lacquer] tracking failed from', base, e); errors.push((e && e.message) || String(e)); }
+    }
+    throw new Error(errors.join(' · '));
   })();
-  handsReady.catch(() => { handsReady = null; });
+  handsReady.catch(e => { trackingError = (e && e.message) || String(e); handsReady = null; });
   return handsReady;
 }
+function trackingFailMsg() { return 'Hand tracking could not load: ' + (trackingError || 'unknown error') + '. Tap Demo, then try again.'; }
 
 function onResults(res) {
   const kind = pending; pending = null;
@@ -855,7 +879,9 @@ async function loadPhoto(file) {
     await hands.send({ image: cv });
   } catch (e) {
     console.warn(e);
-    setStatus('Hand tracking could not load here. The demo hand still works.', 'warn');
+    if (!trackingError) trackingError = (e && e.message) || String(e);
+    setStatus(trackingFailMsg(), 'warn');
+    toast(trackingFailMsg());
   } finally { URL.revokeObjectURL(url); }
 }
 
@@ -871,7 +897,7 @@ async function setMode(mode) {
       state.mode = 'live'; syncModeButtons();
       setStatus('Starting camera…', 'busy');
       await startCamera();
-      ensureHands().then(() => liveStatus()).catch(() => setStatus('Hand tracking could not load. Check your connection.', 'warn'));
+      ensureHands().then(() => liveStatus()).catch(() => { setStatus(trackingFailMsg(), 'warn'); toast(trackingFailMsg()); });
     } catch (e) {
       console.warn(e);
       stopCamera();
