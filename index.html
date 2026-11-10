@@ -254,7 +254,7 @@ video#cam { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-eve
       <div class="rail" id="shapeRail" style="min-height:76px"></div>
       <div class="inner sliders">
         <label for="lengthInput">Length</label>
-        <input type="range" id="lengthInput" min="0" max="100" value="15">
+        <input type="range" id="lengthInput" min="0" max="100" value="20">
         <label for="widthInput">Width</label>
         <input type="range" id="widthInput" min="-25" max="25" value="0">
         <button class="reset" id="resetFit" type="button">Reset</button>
@@ -369,9 +369,9 @@ const FINISHES = [
 ];
 /* ext = extra length past the fingertip (in distal-bone lengths) that the shape needs to read correctly */
 const SHAPES = [
-  { id: 'round', name: 'Round', ext: 0.02 }, { id: 'square', name: 'Square', ext: 0.04 },
-  { id: 'almond', name: 'Almond', ext: 0.16 }, { id: 'coffin', name: 'Coffin', ext: 0.24 },
-  { id: 'stiletto', name: 'Stiletto', ext: 0.36 },
+  { id: 'round', name: 'Round', ext: 0 }, { id: 'square', name: 'Square', ext: 0.02 },
+  { id: 'almond', name: 'Almond', ext: 0.12 }, { id: 'coffin', name: 'Coffin', ext: 0.2 },
+  { id: 'stiletto', name: 'Stiletto', ext: 0.32 },
 ];
 const PATTERNS = [
   { id: 'none', name: 'None' }, { id: 'french', name: 'French' }, { id: 'ombre', name: 'Ombré' }, { id: 'aura', name: 'Aura' },
@@ -386,14 +386,15 @@ const FINGER_NAMES = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
 
 /* MediaPipe Hands landmark indices per finger: [mcp, pip, dip, tip] (thumb: [cmc, mcp, ip, tip]) */
 const FINGERS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
-/* Nail anatomy per finger: nail width as a share of knuckle span (index→pinky) and of the last bone's length,
-   and where the cuticle sits along the last bone (0 = last joint, 1 = fingertip). */
+/* Nail anatomy per finger, measured along the last bone from the last joint (0) to MediaPipe's fingertip point (1).
+   MediaPipe puts the "tip" point in the middle of the nail plate, so the cuticle sits at ~0.6 and the nail bed
+   ends ~0.2 past the point. Width blends the last bone's length (lw) with the knuckle span index→pinky (pw). */
 const NAIL_GEO = [
-  { pw: 0.29, lw: 0.5, cut: 0.38 },
-  { pw: 0.225, lw: 0.5, cut: 0.42 },
-  { pw: 0.232, lw: 0.5, cut: 0.42 },
-  { pw: 0.215, lw: 0.5, cut: 0.42 },
-  { pw: 0.18, lw: 0.5, cut: 0.42 },
+  { pw: 0.19, lw: 0.4, cut: 0.6, end: 1.18 },
+  { pw: 0.15, lw: 0.44, cut: 0.6, end: 1.2 },
+  { pw: 0.155, lw: 0.44, cut: 0.6, end: 1.2 },
+  { pw: 0.145, lw: 0.44, cut: 0.6, end: 1.2 },
+  { pw: 0.12, lw: 0.44, cut: 0.6, end: 1.2 },
 ];
 
 const MP_VERSION = '0.4.1675469240';
@@ -408,7 +409,7 @@ const state = {
   shade: clampIdx(store.get('shade', 5), SHADES.length),
   finish: store.get('finish', 'creme'),
   shape: store.get('shape', 'almond'),
-  length: store.get('length2', 15),
+  length: store.get('length3', 20),
   width: store.get('width', 0),
   coverage: store.get('coverage', 'auto'),
   lookKind: store.get('lookKind', 'catalog'),
@@ -420,7 +421,7 @@ if (!SHAPES.some(s => s.id === state.shape)) state.shape = 'almond';
 function clampIdx(i, n) { i = Number(i) | 0; return i >= 0 && i < n ? i : 0; }
 function save() {
   store.set('shade', state.shade); store.set('finish', state.finish); store.set('shape', state.shape);
-  store.set('length2', state.length); store.set('width', state.width); store.set('coverage', state.coverage);
+  store.set('length3', state.length); store.set('width', state.width); store.set('coverage', state.coverage);
   store.set('lookKind', state.lookKind); store.set('designId', state.designId);
 }
 
@@ -533,16 +534,19 @@ function nailFrames(P, opts = {}) {
     const minFacing = opts.sure === false ? 0.25 : 0.05;
     if (facing < minFacing) return;
     const g = NAIL_GEO[fi];
-    const w = (0.5 * palm * g.pw + 0.5 * L * g.lw) * widthMul;
+    const w = (0.4 * palm * g.pw + 0.6 * L * g.lw) * widthMul;
     const side = cross(n, u);
     const fx = Math.max(opts.always ? 0.55 : 0.18, Math.hypot(side.x, side.y));
     const fy = Math.max(0.2, Math.hypot(u.x, u.y));
-    // Nail sits on the back surface of the finger, about half a nail-width above the bone.
-    const base3 = addv(addv(dip, u, L * g.cut), opts.always && n.z > 0 ? scl(n, 0) : n, 0.45 * w);
     const ul = Math.hypot(u.x, u.y) || 1;
+    const u2 = { x: u.x / ul, y: u.y / ul }, v2 = { x: -u2.y, y: u2.x };
+    // Cuticle point on the finger's centre line. MediaPipe's depth is too noisy to shift nails on a hand facing the
+    // camera, so only a finger that is clearly rolled sideways moves its nail toward the visible edge.
+    const c3 = addv(dip, u, L * g.cut);
+    const roll = (n.x * v2.x + n.y * v2.y) * 0.32 * w * (1 - smooth(0.55, 0.85, facing));
     out.push({
-      fi, base: { x: base3.x, y: base3.y }, u2: { x: u.x / ul, y: u.y / ul }, fx, fy, w, L,
-      natural: L * (1 - g.cut) * 1.02, alpha: opts.always ? 1 : smooth(minFacing, minFacing + 0.17, facing), seed: 1000 + fi * 97,
+      fi, base: { x: c3.x + v2.x * roll, y: c3.y + v2.y * roll }, u2, fx, fy, w, L,
+      natural: L * (g.end - g.cut), alpha: opts.always ? 1 : smooth(minFacing, minFacing + 0.17, facing), seed: 1000 + fi * 97,
     });
   });
   return out;
@@ -1023,7 +1027,8 @@ function buildDemoImage() {
     const width = palmW * (fi === 0 ? 0.36 : fi === 4 ? 0.24 : 0.3);
     const pts = ids.map(id => L[id]);
     const a = pts[2], b = pts[3], ln = dist2(a, b);
-    const tipIn = { x: b.x - (b.x - a.x) / ln * width * 0.5, y: b.y - (b.y - a.y) / ln * width * 0.5 };
+    const reach = ln * 0.28 - width * 0.5; // fingertip skin ends ~0.28 bone-lengths past the tip point
+    const tipIn = { x: b.x + (b.x - a.x) / ln * reach, y: b.y + (b.y - a.y) / ln * reach };
     const P = [pts[0], pts[1], pts[2], tipIn];
     c.strokeStyle = skinLo; c.lineWidth = width + 4;
     c.beginPath(); P.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)); c.stroke();
@@ -1258,7 +1263,7 @@ function miniNail(canvas, look, cssW = 52, cssH = 64, fi = 1) {
   const c = canvas.getContext('2d');
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, canvas.width, canvas.height);
   let nw = W * 0.46 * r;
-  let L = nw * 2, natural = nw * 1.15;
+  let L = nw * 2.27, natural = nw * 1.36;
   let len = nailLength(natural, L, look.shape, look.length);
   const k = Math.min(1, (H - 10) * r / len);
   nw *= Math.max(0.75, k); L *= k; natural *= k;
@@ -1430,11 +1435,11 @@ new ResizeObserver(() => { if (!studio.hidden) { sizeEditor(); drawEditor(); } }
 /* The big nail: tip at the top, finger below. Design units: x across (nail widths), y from cuticle toward tip. */
 function editorGeometry() {
   const cw = edCanvas.width, ch = edCanvas.height;
-  const ratio = (nailLength(1.15, 2, state.shape, state.length)); // nail length in nail widths
+  const ratio = nailLength(1.36, 2.27, state.shape, state.length); // nail length in nail widths
   const W = Math.min(cw * 0.36, (ch * 0.78) / (ratio + 0.55));
   const len = ratio * W;
   const cx = cw / 2, by = ch * 0.5 + len * 0.5 + W * 0.1;
-  return { W, len, cx, by, natural: W * 1.15, L: W * 2 };
+  return { W, len, cx, by, natural: W * 1.36, L: W * 2.27 };
 }
 function drawEditor(t = performance.now() / 1000) {
   if (studio.hidden || !editor.design) return;
@@ -1473,7 +1478,7 @@ function drawHandPreview(t) {
   const look = { kind: 'design', design: editor.design, shape: state.shape, length: state.length };
   const xs = [0.1, 0.3, 0.5, 0.7, 0.9], sizes = [1.05, 0.95, 1, 0.92, 0.78];
   xs.forEach((x, fi) => {
-    const w = 26 * sizes[fi], L = w * 2, natural = w * 1.15;
+    const w = 26 * sizes[fi], L = w * 2.27, natural = w * 1.36;
     const len = nailLength(natural, L, state.shape, state.length);
     const k = Math.min(1, (cv.height - 8) / len);
     const nf = { base: { x: x * cv.width, y: cv.height / 2 + len * k / 2 }, u: { x: 0, y: -1 }, v: { x: 1, y: 0 }, fx: 1, fy: 1, w: w * Math.max(0.8, k), L: L * k, natural: natural * k, seed: 1000 + fi * 97, fi };

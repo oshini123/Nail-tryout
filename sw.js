@@ -1,5 +1,5 @@
 // Offline cache. Pages load network-first so a new deploy shows up on the next open.
-const CACHE = 'lacquer-v3';
+const CACHE = 'lacquer-v4';
 const ASSETS = [
   "./",
   "index.html",
